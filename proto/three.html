@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>브랜드 경쟁 분석 프로토타입</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+      }
+      /* 로딩 스피너 스타일 */
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      /* 네트워크 그래프 스타일 */
+      .node {
+        padding: 8px 16px;
+        border-radius: 20px;
+        color: white;
+        font-size: 14px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .node.start {
+        background-color: #3b82f6;
+      } /* blue-500 */
+      .node.intermediate {
+        background-color: #6b7280;
+      } /* gray-500 */
+      .node.end {
+        background-color: #ec4899;
+      } /* pink-500 */
+      .arrow {
+        color: #9ca3af; /* gray-400 */
+        font-size: 24px;
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-4 md:p-8">
+      <header class="text-center mb-10">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+          통합 브랜드 경쟁 분석
+        </h1>
+        <p class="text-gray-600 mt-2">
+          경쟁 맵 분석과 소비자 유입/이탈 경로 분석을 통합 제공합니다.
+        </p>
+      </header>
+
+      <main class="space-y-12">
+        <!-- 분석 1: 브랜드 경쟁 맵 -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-bold mb-2">PART 1: 브랜드 경쟁 맵 분석</h2>
+          <p class="text-gray-500 mb-6">
+            소비자 관점의 경쟁 관계를 분석하여 차별화 포인트를 발견합니다.
+          </p>
+
+          <!-- Step 1-1: 분석 정보 입력 -->
+          <section id="input-section" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+              Step 1: 분석 정보 입력
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  for="category"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >분석 대상 카테고리</label
+                >
+                <input
+                  type="text"
+                  id="category"
+                  value="마우스워시"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label
+                  for="brands"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >주요 브랜드명 (최대 5개, 쉼표로 구분)</label
+                >
+                <input
+                  type="text"
+                  id="brands"
+                  value="리스테린, 몬다민, 버틀러"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div class="text-center mt-6">
+              <button
+                id="start-analysis"
+                class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300"
+              >
+                경쟁 맵 분석 시작
+              </button>
+            </div>
+          </section>
+
+          <!-- 로딩 및 결과 섹션 (경쟁 맵) -->
+          <div
+            id="loading-indicator"
+            class="hidden flex-col items-center justify-center my-10"
+          >
+            <div class="loader"></div>
+            <p class="mt-4 text-gray-600">데이터를 분석 중입니다...</p>
+          </div>
+
+          <div id="results-section" class="hidden space-y-8">
+            <!-- Step 1-2: 브랜드별 검색량 & 시장 점유율 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 2: 브랜드별 검색량 & 시장 점유율
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 text-left">브랜드</th>
+                      <th class="py-2 px-4 text-right">월평균 검색량</th>
+                      <th class="py-2 px-4 text-right">카테고리 내 점유율</th>
+                      <th class="py-2 px-4 text-right">트렌드 (전년 대비)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="market-share-table"></tbody>
+                </table>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 text-right">
+                ※ 데이터 출처: ListeningMind API (keyword_by_keyword_post)
+              </p>
+            </section>
+            <!-- Step 1-3: 브랜드 경쟁 분석 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 3: 브랜드 경쟁 분석
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 text-left">측면</th>
+                      <th class="py-2 px-4 text-left">브랜드A</th>
+                      <th class="py-2 px-4 text-left">브랜드B</th>
+                      <th class="py-2 px-4 text-left">상황</th>
+                      <th class="py-2 px-4 text-left">공통 키워드</th>
+                      <th class="py-2 px-4 text-right">검색량</th>
+                      <th class="py-2 px-4 text-center">경쟁 강도</th>
+                      <th class="py-2 px-4 text-left">해석</th>
+                    </tr>
+                  </thead>
+                  <tbody id="competition-analysis-table"></tbody>
+                </table>
+              </div>
+            </section>
+            <!-- Step 1-4: 경쟁 강도 시각화 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 4: 경쟁 강도 시각화 (히트맵)
+              </h3>
+              <div class="overflow-x-auto">
+                <table
+                  class="min-w-full border-collapse border border-gray-300"
+                >
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 border border-gray-300">
+                        브랜드 조합
+                      </th>
+                      <th class="py-2 px-4 border border-gray-300">효과</th>
+                      <th class="py-2 px-4 border border-gray-300">안전성</th>
+                      <th class="py-2 px-4 border border-gray-300">사용자층</th>
+                      <th class="py-2 px-4 border border-gray-300">휴대성</th>
+                    </tr>
+                  </thead>
+                  <tbody id="heatmap-table"></tbody>
+                </table>
+              </div>
+            </section>
+            <!-- Step 1-5: 전략적 인사이트 도출 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 5: 전략적 인사이트
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 text-left">측면</th>
+                      <th class="py-2 px-4 text-left">주요 경쟁 브랜드</th>
+                      <th class="py-2 px-4 text-left">의미</th>
+                      <th class="py-2 px-4 text-left">전략 제안</th>
+                    </tr>
+                  </thead>
+                  <tbody id="insight-table"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- 분석 2: 브랜드 유입/이탈 분석 -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-bold mb-2">
+            PART 2: 브랜드 유입/이탈 경로 분석
+          </h2>
+          <p class="text-gray-500 mb-6">
+            소비자의 검색 경로를 시각화하여 브랜드 전환 이유와 배경을
+            분석합니다.
+          </p>
+
+          <!-- Step 2-1: 분석 정보 입력 -->
+          <section id="flow-input-section" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+              Step 1: 분석 대상 입력
+            </h3>
+            <div
+              class="flex flex-col sm:flex-row items-center justify-center gap-4"
+            >
+              <div>
+                <label
+                  for="departure-brand"
+                  class="block text-sm font-medium text-gray-700 mb-1 text-center"
+                  >출발 브랜드</label
+                >
+                <input
+                  type="text"
+                  id="departure-brand"
+                  value="리스테린"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div class="text-2xl font-semibold text-gray-500 mt-0 sm:mt-6">
+                →
+              </div>
+              <div>
+                <label
+                  for="arrival-brand"
+                  class="block text-sm font-medium text-gray-700 mb-1 text-center"
+                  >도착 브랜드</label
+                >
+                <input
+                  type="text"
+                  id="arrival-brand"
+                  value="몬다민"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            <div class="text-center mt-6">
+              <button
+                id="start-flow-analysis"
+                class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition duration-300"
+              >
+                유입/이탈 경로 분석
+              </button>
+            </div>
+          </section>
+
+          <!-- 로딩 및 결과 섹션 (유입/이탈) -->
+          <div
+            id="flow-loading-indicator"
+            class="hidden flex-col items-center justify-center my-10"
+          >
+            <div class="loader" style="border-top-color: #4f46e5"></div>
+            <p class="mt-4 text-gray-600">전환 경로를 분석 중입니다...</p>
+          </div>
+
+          <div id="flow-results-section" class="hidden space-y-8">
+            <!-- Step 2-2: 브랜드 전환 경로 시각화 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 2: 브랜드 전환 경로 시각화
+              </h3>
+              <div
+                id="path-visualization"
+                class="space-y-4 p-4 bg-gray-50 rounded-lg"
+              >
+                <!-- JS로 경로 시각화 생성 -->
+              </div>
+            </section>
+            <!-- Step 2-3: 경로 해석 및 요인 분석 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 3: 경로 해석 및 요인 분석
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 text-left">브랜드 전환 경로</th>
+                      <th class="py-2 px-4 text-left">주요 요인</th>
+                      <th class="py-2 px-4 text-left">해석</th>
+                    </tr>
+                  </thead>
+                  <tbody id="path-interpretation-table"></tbody>
+                </table>
+              </div>
+            </section>
+            <!-- Step 2-4: 전략적 인사이트 -->
+            <section>
+              <h3 class="text-xl font-semibold mb-4 border-b pb-2">
+                Step 4: 이탈 방지 전략 제안
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="py-2 px-4 text-left">전환 동기</th>
+                      <th class="py-2 px-4 text-left">
+                        대표 신호 (검색 키워드 예시)
+                      </th>
+                      <th class="py-2 px-4 text-left">대응 전략 (이탈 방지)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="flow-insight-table"></tbody>
+                </table>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 text-right">
+                ※ 데이터 출처: ListeningMind API (pathfinder_by_pathfinder_post)
+              </p>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <footer class="text-center mt-12 text-sm text-gray-500">
+        <p>
+          &copy; 2024 Brand Competition Analysis Prototype. All rights reserved.
+        </p>
+        <p>
+          본 페이지는 제공된 문서를 기반으로 제작된 프로토타입이며, 표시된
+          데이터는 예시입니다.
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      // --- 데이터베이스 (Part 1: 경쟁 맵) ---
+      const marketShareData = [
+        {
+          brand: "리스테린",
+          searchVolume: "35,566",
+          share: "58.8%",
+          trend: "+22%",
+          trendColor: "text-blue-600",
+        },
+        {
+          brand: "몬다민",
+          searchVolume: "23,833",
+          share: "39.3%",
+          trend: "+22%",
+          trendColor: "text-blue-600",
+        },
+        {
+          brand: "버틀러",
+          searchVolume: "10,633",
+          share: "17.5%",
+          trend: "-33%",
+          trendColor: "text-red-600",
+        },
+      ];
+      const competitionAnalysisData = [
+        {
+          aspect: "효과",
+          brandA: "리스테린",
+          brandB: "몬다민",
+          type: "비교",
+          keywords: "효과 비교; 구취; 최강",
+          searchVolume: "4,500",
+          strength: "강",
+          interpretation: "살균력 vs 일상 케어 비교",
+        },
+        {
+          aspect: "안전성",
+          brandA: "리스테린",
+          brandB: "몬다민",
+          type: "비교",
+          keywords: "위험성; 안전; 랭킹",
+          searchVolume: "3,200",
+          strength: "중",
+          interpretation: "자극 강도와 저자극성의 대조",
+        },
+        {
+          aspect: "사용자층",
+          brandA: "몬다민",
+          brandB: "버틀러",
+          type: "중복",
+          keywords: "임산부; 어린이용",
+          searchVolume: "1,500",
+          strength: "중",
+          interpretation: "가족 대상과 치과 신뢰 이미지의 중첩",
+        },
+        {
+          aspect: "휴대성",
+          brandA: "리스테린",
+          brandB: "버틀러",
+          type: "비교",
+          keywords: "휴대용; 미니보틀",
+          searchVolume: "1,200",
+          strength: "약",
+          interpretation: "대중적 휴대성과 프리미엄 휴대성의 차별화",
+        },
+      ];
+      const strategicInsightData = [
+        {
+          aspect: "효과",
+          brands: "리스테린 vs 몬다민",
+          meaning: "효과 성능 비교",
+          suggestion: "리스테린: 살균력 강조 / 몬다민: 부드러운 사용감 강조",
+        },
+        {
+          aspect: "안전성",
+          brands: "리스테린 vs 몬다민",
+          meaning: "성분 안전성 경쟁",
+          suggestion: "리스테린: 의학적 근거 강조 / 몬다민: 저자극성 어필",
+        },
+        {
+          aspect: "사용자층",
+          brands: "몬다민 vs 버틀러",
+          meaning: "임산부·아동 시장 중복",
+          suggestion: "몬다민: 가족형 브랜드 / 버틀러: 치과 신뢰 중심",
+        },
+        {
+          aspect: "휴대성",
+          brands: "리스테린 vs 버틀러",
+          meaning: "휴대용 시장 중복",
+          suggestion: "리스테린: 대중적 휴대성 / 버틀러: 프리미엄 휴대성",
+        },
+      ];
+      const heatmapData = {
+        "리스테린 vs 몬다민": {
+          효과: "강",
+          안전성: "중",
+          사용자층: "-",
+          휴대성: "-",
+        },
+        "몬다민 vs 버틀러": {
+          효과: "-",
+          안전성: "-",
+          사용자층: "중",
+          휴대성: "-",
+        },
+        "리스테린 vs 버틀러": {
+          효과: "-",
+          안전성: "-",
+          사용자층: "-",
+          휴대성: "약",
+        },
+      };
+
+      // --- 데이터베이스 (Part 2: 유입/이탈) ---
+      const transitionPathData = [
+        ["リステリン", "口臭ケア", "比較", "ノンアルコール", "モンダミン"],
+        ["リステリン", "価格比較", "コスパ重視", "モンダミン"],
+        ["リステリン", "レビュー", "使用感", "モンダミン"],
+      ];
+      const pathInterpretationData = [
+        {
+          path: "리스테린 → 구취 케어 비교 → ... → 몬다민",
+          factor: "안전성/기능",
+          interpretation: "무알코올, 저자극 제품을 찾는 과정에서 전환 발생",
+        },
+        {
+          path: "리스테린 → 마우스워시 가격 → ... → 몬다민",
+          factor: "가격",
+          interpretation: "가성비(Cospa)를 중시하는 소비자의 전환",
+        },
+        {
+          path: "리스테린 → 저자극 마우스워시 → ... → 몬다민",
+          factor: "사용감/리뷰",
+          interpretation: "실제 사용 후기를 참고하여 자극이 적은 제품으로 전환",
+        },
+      ];
+      const flowInsightData = [
+        {
+          motive: "가격",
+          signal: "가격 비교, 저렴한, 세일",
+          strategy: "가격 보장, 세트 할인, 장기 할인",
+        },
+        {
+          motive: "기능",
+          signal: "효과 비교, 배터리 수명, 음질",
+          strategy: "기능 개선, 체험 영상, 보증 연장",
+        },
+        {
+          motive: "안전성",
+          signal: "자극 강함, 안전, 무첨가",
+          strategy: "성분 공개, 제3자 시험, 저자극 제품",
+        },
+      ];
+
+      // --- DOM 요소 (Part 1) ---
+      const startButton = document.getElementById("start-analysis");
+      const inputSection = document.getElementById("input-section");
+      const loadingIndicator = document.getElementById("loading-indicator");
+      const resultsSection = document.getElementById("results-section");
+      const marketShareTable = document.getElementById("market-share-table");
+      const competitionAnalysisTable = document.getElementById(
+        "competition-analysis-table"
+      );
+      const heatmapTable = document.getElementById("heatmap-table");
+      const insightTable = document.getElementById("insight-table");
+
+      // --- DOM 요소 (Part 2) ---
+      const startFlowButton = document.getElementById("start-flow-analysis");
+      const flowInputSection = document.getElementById("flow-input-section");
+      const flowLoadingIndicator = document.getElementById(
+        "flow-loading-indicator"
+      );
+      const flowResultsSection = document.getElementById(
+        "flow-results-section"
+      );
+      const pathVisualizationDiv =
+        document.getElementById("path-visualization");
+      const pathInterpretationTable = document.getElementById(
+        "path-interpretation-table"
+      );
+      const flowInsightTable = document.getElementById("flow-insight-table");
+
+      // --- 함수 (공통) ---
+      function getStrengthClass(strength) {
+        switch (strength) {
+          case "강":
+            return "bg-red-500 text-white";
+          case "중":
+            return "bg-yellow-400 text-white";
+          case "약":
+            return "bg-green-300 text-gray-800";
+          default:
+            return "bg-gray-100";
+        }
+      }
+      function getStrengthBadge(strength) {
+        return `<span class="px-3 py-1 text-xs font-semibold rounded-full ${getStrengthClass(
+          strength
+        )}">${strength}</span>`;
+      }
+
+      // --- 함수 (Part 1) ---
+      function populateCompetitionTables() {
+        marketShareTable.innerHTML = marketShareData
+          .map(
+            (item) => `
+                <tr class="border-b"><td class="py-3 px-4 font-medium">${item.brand}</td><td class="py-3 px-4 text-right">${item.searchVolume}</td><td class="py-3 px-4 text-right">${item.share}</td><td class="py-3 px-4 text-right font-medium ${item.trendColor}">${item.trend}</td></tr>`
+          )
+          .join("");
+        competitionAnalysisTable.innerHTML = competitionAnalysisData
+          .map(
+            (item) => `
+                <tr class="border-b"><td class="py-3 px-4 font-medium">${
+                  item.aspect
+                }</td><td>${item.brandA}</td><td>${item.brandB}</td><td>${
+              item.type
+            }</td><td class="text-sm">${
+              item.keywords
+            }</td><td class="text-right">${
+              item.searchVolume
+            }</td><td class="text-center">${getStrengthBadge(
+              item.strength
+            )}</td><td class="text-sm">${item.interpretation}</td></tr>`
+          )
+          .join("");
+        heatmapTable.innerHTML = Object.entries(heatmapData)
+          .map(
+            ([brandPair, aspects]) => `
+                <tr class="text-center"><td class="py-3 px-4 border border-gray-300 font-medium bg-gray-50 text-left">${brandPair}</td><td class="py-3 px-4 border border-gray-300 ${getStrengthClass(
+              aspects["효과"]
+            )}">${
+              aspects["효과"]
+            }</td><td class="py-3 px-4 border border-gray-300 ${getStrengthClass(
+              aspects["안전성"]
+            )}">${
+              aspects["안전성"]
+            }</td><td class="py-3 px-4 border border-gray-300 ${getStrengthClass(
+              aspects["사용자층"]
+            )}">${
+              aspects["사용자층"]
+            }</td><td class="py-3 px-4 border border-gray-300 ${getStrengthClass(
+              aspects["휴대성"]
+            )}">${aspects["휴대성"]}</td></tr>`
+          )
+          .join("");
+        insightTable.innerHTML = strategicInsightData
+          .map(
+            (item) => `
+                <tr class="border-b"><td class="py-3 px-4 font-medium">${item.aspect}</td><td>${item.brands}</td><td>${item.meaning}</td><td>${item.suggestion}</td></tr>`
+          )
+          .join("");
+      }
+
+      // --- 함수 (Part 2) ---
+      function createPathVisualization() {
+        pathVisualizationDiv.innerHTML = "";
+        transitionPathData.forEach((path) => {
+          const pathContainer = document.createElement("div");
+          pathContainer.className = "flex items-center gap-2 flex-wrap";
+          path.forEach((node, index) => {
+            const nodeEl = document.createElement("div");
+            nodeEl.className = "node";
+            nodeEl.textContent = node;
+            if (index === 0) nodeEl.classList.add("start");
+            else if (index === path.length - 1) nodeEl.classList.add("end");
+            else nodeEl.classList.add("intermediate");
+            pathContainer.appendChild(nodeEl);
+            if (index < path.length - 1) {
+              const arrowEl = document.createElement("div");
+              arrowEl.className = "arrow";
+              arrowEl.innerHTML = "&rarr;";
+              pathContainer.appendChild(arrowEl);
+            }
+          });
+          pathVisualizationDiv.appendChild(pathContainer);
+        });
+      }
+      function populateFlowTables() {
+        createPathVisualization();
+        pathInterpretationTable.innerHTML = pathInterpretationData
+          .map(
+            (item) => `
+                <tr class="border-b"><td class="py-3 px-4">${item.path}</td><td class="py-3 px-4 font-medium">${item.factor}</td><td class="py-3 px-4">${item.interpretation}</td></tr>`
+          )
+          .join("");
+        flowInsightTable.innerHTML = flowInsightData
+          .map(
+            (item) => `
+                <tr class="border-b"><td class="py-3 px-4 font-medium">${item.motive}</td><td class="py-3 px-4">${item.signal}</td><td class="py-3 px-4">${item.strategy}</td></tr>`
+          )
+          .join("");
+      }
+
+      // --- 이벤트 리스너 (Part 1) ---
+      startButton.addEventListener("click", () => {
+        if (
+          !document.getElementById("category").value.trim() ||
+          !document.getElementById("brands").value.trim()
+        ) {
+          alert("카테고리와 브랜드명을 모두 입력해주세요.");
+          return;
+        }
+        inputSection.classList.add("hidden");
+        loadingIndicator.classList.remove("hidden");
+        loadingIndicator.classList.add("flex");
+        resultsSection.classList.add("hidden");
+        setTimeout(() => {
+          populateCompetitionTables();
+          loadingIndicator.classList.add("hidden");
+          loadingIndicator.classList.remove("flex");
+          resultsSection.classList.remove("hidden");
+          resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 1500);
+      });
+
+      // --- 이벤트 리스너 (Part 2) ---
+      startFlowButton.addEventListener("click", () => {
+        if (
+          !document.getElementById("departure-brand").value.trim() ||
+          !document.getElementById("arrival-brand").value.trim()
+        ) {
+          alert("출발 및 도착 브랜드를 모두 입력해주세요.");
+          return;
+        }
+        // UI 상태 변경
+        flowInputSection.classList.add("hidden");
+        flowLoadingIndicator.classList.remove("hidden");
+        flowLoadingIndicator.classList.add("flex");
+        flowResultsSection.classList.add("hidden");
+        setTimeout(() => {
+          populateFlowTables();
+          flowLoadingIndicator.classList.add("hidden");
+          flowLoadingIndicator.classList.remove("flex");
+          flowResultsSection.classList.remove("hidden");
+          flowResultsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 1500);
+      });
+    </script>
+  </body>
+</html>
